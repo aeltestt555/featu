@@ -1,0 +1,88 @@
+import axios from 'axios';
+
+// const state = {
+//   user: null,
+//   token: localStorage.getItem('access_token') || null,
+// };
+
+const getters = {
+  isAuthenticated: (state) => !!state.token,
+  user: (state) => state.user,
+};
+
+const state = {
+  user: JSON.parse(localStorage.getItem('user')) || null,
+  token: localStorage.getItem('access_token') || null,
+};
+
+const mutations = {
+  SET_TOKEN(state, token) {
+    state.token = token;
+    localStorage.setItem('access_token', token);
+    axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+  },
+  SET_USER(state, user) {
+    state.user = { ...user }; // Use spread operator to ensure reactivity
+    localStorage.setItem('user', JSON.stringify(user));
+  },
+  CLEAR_AUTH(state) {
+    state.token = null;
+    state.user = null;
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('user');
+    delete axios.defaults.headers.common['Authorization'];
+  },
+};
+
+
+const actions = {
+  async login({ commit }, credentials) {
+    try {
+      const response = await axios.post('/login', credentials);
+      commit('SET_TOKEN', response.data.access_token);
+      commit('SET_USER', response.data.user);
+      return response;
+    } catch (error) {
+      console.error('Login error:', error);
+      throw error;
+    }
+  },
+  async logout({ commit }) {
+    try {
+      await axios.post('/logout', {}, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('access_token')}` }
+      });
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      commit('CLEAR_AUTH');
+    }
+  },
+  async checkAuth({ commit, state }) {
+    const token = localStorage.getItem('access_token');
+    if (token && !state.token) {
+      commit('SET_TOKEN', token);
+      const user = JSON.parse(localStorage.getItem('user'));
+      if (user) commit('SET_USER', user);
+    }
+  },
+  async register({ commit }, userData) {
+    try {
+      const response = await axios.post('/register', userData);
+      commit('SET_TOKEN', response.data.access_token);
+      commit('SET_USER', response.data.user);
+      return response;
+    } catch (error) {
+      console.error('Registration error:', error);
+      throw error;
+    }
+  },
+};
+
+export default {
+  namespaced: true,
+  state,
+  getters,
+  mutations,
+  actions,
+};
