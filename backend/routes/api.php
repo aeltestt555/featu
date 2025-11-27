@@ -1,0 +1,34 @@
+<?php
+
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\DashboardController;
+use App\Http\Controllers\Api\UserController;
+
+// Public routes
+Route::post('/register', [AuthController::class, 'register']);
+Route::post('/login', [AuthController::class, 'login']);
+
+// Protected routes
+Route::middleware('jwt.verify')->group(function () {
+    // Auth routes
+    Route::post('/logout', [AuthController::class, 'logout']);
+    Route::post('/refresh', [AuthController::class, 'refresh']);
+    Route::get('/me', [AuthController::class, 'me']);
+
+    // Dashboard routes
+    Route::get('/dashboard', [DashboardController::class, 'index']);
+    Route::get('/dashboard/stats', [DashboardController::class, 'stats']);
+
+    // User management routes
+    Route::apiResource('users', UserController::class);
+});
+
+// Admin only routes
+Route::middleware(['jwt.verify', 'role:admin'])->group(function () {
+    Route::get('/admin/users', [UserController::class, 'index']);
+});
+Route::get('/', function () {
+   return  'welcome';
+});
