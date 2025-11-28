@@ -46,9 +46,10 @@
               <span v-else>Se connecter</span>
             </button>
 
-            <p class="forgot-password">
+         <!--   <p class="forgot-password">
               <router-link to="/forgot-password">Mot de passe oublié ?</router-link>
             </p>
+            -->
 
             <p v-if="errorMessage" class="error-message">{{ errorMessage }}</p>
           </form>
