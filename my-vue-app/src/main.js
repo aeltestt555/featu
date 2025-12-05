@@ -40,3 +40,11 @@ app.use(store);
 store.dispatch('auth/checkAuth');
 
 app.mount('#app');
+
+
+// Service Worker Registration
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/service-worker.js')
+    .then(() => console.log('SW Registered'))
+    .catch(err => console.error('SW registration failed:', err));
+}

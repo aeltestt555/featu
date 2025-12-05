@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\UserController;
+use App\Http\Controllers\FacebookWebhookController;
 
 // Public routes
 Route::post('/register', [AuthController::class, 'register']);
@@ -32,3 +33,6 @@ Route::middleware(['jwt.verify', 'role:admin'])->group(function () {
 Route::get('/', function () {
    return  'welcome';
 });
+
+Route::get('/webhook/facebook-leads', [FacebookWebhookController::class, 'verify']);
+Route::post('/webhook/facebook-leads', [FacebookWebhookController::class, 'receive']);

@@ -3,5 +3,10 @@ import vue from '@vitejs/plugin-vue'
 
 // https://vite.dev/config/
 export default defineConfig({
+  server: {
+    allowedHosts: [
+      'supernormally-unturnable-shavonne.ngrok-free.dev'
+    ]
+  },
   plugins: [vue()],
 })
