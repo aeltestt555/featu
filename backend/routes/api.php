@@ -34,5 +34,5 @@ Route::get('/', function () {
    return  'welcome';
 });
 
-Route::get('/webhook/facebook-leads', [FacebookWebhookController::class, 'verify']);
-Route::post('/webhook/facebook-leads', [FacebookWebhookController::class, 'receive']);
+// Route::get('/webhook/facebook-leads', [FacebookWebhookController::class, 'verify']);
+// Route::post('/webhook/facebook-leads', [FacebookWebhookController::class, 'receive']);

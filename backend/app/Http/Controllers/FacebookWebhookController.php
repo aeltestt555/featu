@@ -18,6 +18,7 @@ class FacebookWebhookController extends Controller
     // Step 1: Facebook checks you
     public function verify(Request $request)
     {
+        Log::info('Verifi first ');
         if (
             $request->query('hub_mode') === 'subscribe' &&
             $request->query('hub_verify_token') === $this->_verifyToken

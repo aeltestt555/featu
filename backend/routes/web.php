@@ -14,5 +14,5 @@ Route::get('/thank-you', [LandingController::class, 'thankyou'])->name('landing.
 Route::view('/privacy-policy', 'privacy-policy')->name('privacy.policy');
 
 // routes/web.php
-// Route::get('/webhook/facebook-leads', [FacebookWebhookController::class, 'verify']);
-// Route::post('/webhook/facebook-leads', [FacebookWebhookController::class, 'receive']);
+Route::get('/webhook/facebook-leads', [FacebookWebhookController::class, 'verify']);
+Route::post('/webhook/facebook-leads', [FacebookWebhookController::class, 'receive']);
