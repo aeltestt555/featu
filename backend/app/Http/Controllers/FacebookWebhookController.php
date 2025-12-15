@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
@@ -8,73 +9,109 @@ use Illuminate\Support\Facades\Log;
 
 class FacebookWebhookController extends Controller
 {
-    private $_verifyToken;
+    private string $_verifyToken;
 
     public function __construct()
     {
         $this->_verifyToken = env('FB_PAGE_VERIFY_TOKEN');
     }
 
-    // Step 1: Facebook checks you
+    /**
+     * Step 1: Facebook webhook verification
+     * Handles GET request from Facebook to verify webhook.
+     */
     public function verify(Request $request)
     {
-        Log::info('Verifi first ');
-        if (
-            $request->query('hub_mode') === 'subscribe' &&
-            $request->query('hub_verify_token') === $this->_verifyToken
-        ) {
-            return response($request->query('hub_challenge'), 200);
+        $mode = $request->query('hub_mode');
+        $token = $request->query('hub_verify_token');
+        $challenge = $request->query('hub_challenge');
+
+        Log::info('Webhook verification attempt', [
+            'hub_mode' => $mode,
+            'hub_verify_token' => $token
+        ]);
+
+        if ($mode === 'subscribe' && $token === $this->_verifyToken) {
+            Log::info('Webhook verified successfully', ['challenge' => $challenge]);
+            return response($challenge, 200);
         }
 
-        Log::info('Verification failed: Invalid token or mode');
+        Log::warning('Webhook verification failed');
         return response('Forbidden', 403);
     }
 
-    // Step 2: Facebook sends the actual lead
+    /**
+     * Step 2: Handle POST requests from Facebook
+     * Receives leads and stores them in database
+     */
     public function receive(Request $request)
     {
-        Log::info('Webhook hit', $request->all());
+        Log::info('Webhook POST received', ['payload' => $request->all()]);
 
-        if (!$request->has('entry')) {
-            Log::warning('No entry in payload');
+        // Validate the payload
+        $entries = $request->input('entry', []);
+        if (empty($entries)) {
+            Log::warning('Webhook payload missing entry');
             return response()->json(['status' => 'error', 'message' => 'No entry in payload'], 400);
         }
 
-        foreach ($request->input('entry', []) as $entry) {
-            if (!isset($entry['changes'])) {
-                Log::warning('No changes in entry', $entry);
+        foreach ($entries as $entry) {
+            $changes = $entry['changes'] ?? [];
+            if (empty($changes)) {
+                Log::warning('Entry missing changes', ['entry' => $entry]);
                 continue;
             }
 
-            foreach ($entry['changes'] as $change) {
-                Log::info('Change received', $change);
+            foreach ($changes as $change) {
+                Log::info('Processing change', $change);
 
-                if ($change['field'] === 'leadgen') {
-                    $leadId = $change['value']['lead_id'];
-                    $formId = $change['value']['form_id'];
+                if (($change['field'] ?? '') === 'leadgen') {
+                    // v24 uses 'leadgen_id' instead of 'lead_id'
+                    $leadId = $change['value']['leadgen_id'] ?? null;
+                    $formId = $change['value']['form_id'] ?? null;
 
-                    // Pull REAL lead data from Facebook
-                    $response = Http::get("https://graph.facebook.com/v19.0/{$leadId}", [
-                        'access_token' => env('FB_PAGE_ACCESS_TOKEN')
-                    ]);
+                    if (!$leadId || !$formId) {
+                        Log::warning('Missing leadgen_id or form_id', ['change' => $change]);
+                        continue;
+                    }
 
-                    if ($response->successful()) {
-                        $leadDetails = $response->json();
-                        Lead::create([
-                            'facebook_lead_id' => $leadId,
-                            'form_id' => $formId,
-                            'data' => json_encode($leadDetails['field_data'] ?? []),
+                    try {
+                        $pageToken = env('LONG_LIVED_FB_PAGE_ACCESS_TOKEN');
+
+                        // Fetch the full lead data
+                        $response = Http::timeout(10)->get("https://graph.facebook.com/v24.0/{$leadId}", [
+                            'access_token' => $pageToken
                         ]);
-                    } else {
-                        Log::error('Failed to fetch lead details from Facebook', [
+
+                        if ($response->successful()) {
+                            $leadDetails = $response->json();
+
+                            Lead::updateOrCreate(
+                                ['facebook_lead_id' => $leadId],
+                                [
+                                    'form_id' => $formId,
+                                    'data' => json_encode($leadDetails['field_data'] ?? []),
+                                ]
+                            );
+
+                            Log::info('Lead saved successfully', ['lead_id' => $leadId]);
+                        } else {
+                            Log::error('Failed to fetch lead details', [
+                                'lead_id' => $leadId,
+                                'response' => $response->body()
+                            ]);
+                        }
+                    } catch (\Exception $e) {
+                        Log::error('Exception while fetching lead', [
                             'lead_id' => $leadId,
-                            'response' => $response->body()
+                            'error' => $e->getMessage()
                         ]);
                     }
                 }
             }
         }
 
-        return response()->json(['status' => 'ok']);
+        // Always respond 200 OK
+        return response()->json(['status' => 'ok'], 200);
     }
 }

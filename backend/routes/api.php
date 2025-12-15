@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\FacebookWebhookController;
+use App\Http\Middleware\VerifyCsrfToken;
 
 // Public routes
 Route::post('/register', [AuthController::class, 'register']);
@@ -36,3 +37,14 @@ Route::get('/', function () {
 
 // Route::get('/webhook/facebook-leads', [FacebookWebhookController::class, 'verify']);
 // Route::post('/webhook/facebook-leads', [FacebookWebhookController::class, 'receive']);
+
+// Facebook Webhook (CSRF Disabled)
+Route::withoutMiddleware([VerifyCsrfToken::class])
+    ->group(function () {
+        Route::get('/webhook/facebook-leads', [FacebookWebhookController::class, 'verify']);
+        Route::post('/webhook/facebook-leads', [FacebookWebhookController::class, 'receive']);
+    });
+
+    Route::post('/test-csrf', function () {
+        return 'CSRF Passed!';
+    });
