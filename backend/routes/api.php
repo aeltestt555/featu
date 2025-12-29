@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\FacebookWebhookController;
+use App\Http\Controllers\WhatsAppController;
 use App\Http\Middleware\VerifyCsrfToken;
 
 // Public routes
@@ -48,3 +49,6 @@ Route::withoutMiddleware([VerifyCsrfToken::class])
     Route::post('/test-csrf', function () {
         return 'CSRF Passed!';
     });
+
+    Route::get('/webhook/whatsapp', [WhatsAppController::class, 'verify']);
+    Route::post('/webhook/whatsapp', [WhatsAppController::class, 'handle']);
